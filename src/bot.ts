@@ -88,3 +88,5 @@ function convertToTZ(date: string, time = '00:00:00Z', tz: string): string {
   return m.format('YYYY-MM-DD HH:mm z');
 }
 
+export { formatRace, convertToTZ };
+
