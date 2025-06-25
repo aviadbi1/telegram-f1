@@ -66,16 +66,35 @@ interface Race {
   Sprint?: { date: string; time?: string };
 }
 
+interface OpenF1Session {
+  meeting_name: string;
+  circuit_short_name: string;
+  session_name: string;
+  date_start: string;
+}
+
 async function fetchFullCalendar(): Promise<Race[]> {
-  const url = 'https://ergast.com/api/f1/current.json';
-  const res = await axios.get(url);
-  return res.data.MRData.RaceTable.Races as Race[];
+  const year = new Date().getFullYear();
+  const url = `https://api.openf1.org/v1/sessions?session_name=Race&year=${year}`;
+  const res = await axios.get<OpenF1Session[]>(url);
+  return res.data.map(mapSessionToRace);
 }
 
 async function fetchNextRace(): Promise<Race[]> {
-  const url = 'https://ergast.com/api/f1/current/next.json';
-  const res = await axios.get(url);
-  return res.data.MRData.RaceTable.Races as Race[];
+  const races = await fetchFullCalendar();
+  const now = new Date();
+  const next = races.find(r => new Date(`${r.date}T${r.time ?? '00:00:00Z'}`) > now);
+  return next ? [next] : [];
+}
+
+function mapSessionToRace(session: OpenF1Session): Race {
+  const [date, time] = session.date_start.split('T');
+  return {
+    raceName: session.meeting_name,
+    Circuit: { circuitName: session.circuit_short_name },
+    date,
+    time,
+  };
 }
 
 function formatRace(race: Race): string {
