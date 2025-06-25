@@ -18,7 +18,7 @@ function startBot(): TelegramBot {
     const chatId = msg.chat.id;
     bot.sendMessage(
       chatId,
-      'Welcome to F1-Schedule!\nSend "full calendar" or "next race" to get information.'
+      'Welcome to F1-Schedule!\nSend "full", "next", "drivers" or "teams" to get information.'
     );
   });
 
@@ -28,7 +28,7 @@ function startBot(): TelegramBot {
 
     console.log(`Received message from ${chatId}: ${text}`);
 
-    if (text === 'full calendar') {
+    if (text === 'full') {
       try {
         const races = await fetchFullCalendar();
         const message = races.map(formatRace).join('\n\n');
@@ -38,7 +38,7 @@ function startBot(): TelegramBot {
         console.error('Failed to load calendar', err);
         bot.sendMessage(chatId, 'Failed to load calendar');
       }
-    } else if (text === 'next race') {
+    } else if (text === 'next') {
       try {
         const races = await fetchNextRace();
         const message = races.map(formatRace).join('\n\n');
@@ -47,6 +47,26 @@ function startBot(): TelegramBot {
       } catch (err) {
         console.error('Failed to load next race', err);
         bot.sendMessage(chatId, 'Failed to load next race');
+      }
+    } else if (text === 'drivers') {
+      try {
+        const standings = await fetchDriverStandings();
+        const message = standings.join('\n');
+        console.log(`Sending response to ${chatId}: ${message}`);
+        bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (err) {
+        console.error('Failed to load driver standings', err);
+        bot.sendMessage(chatId, 'Failed to load driver standings');
+      }
+    } else if (text === 'teams') {
+      try {
+        const standings = await fetchConstructorStandings();
+        const message = standings.join('\n');
+        console.log(`Sending response to ${chatId}: ${message}`);
+        bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (err) {
+        console.error('Failed to load team standings', err);
+        bot.sendMessage(chatId, 'Failed to load team standings');
       }
     }
   });
@@ -90,6 +110,36 @@ async function fetchNextRace(): Promise<Race[]> {
   return next ? [next] : [];
 }
 
+interface DriverStanding {
+  position: number | string;
+  full_name: string;
+  points: number | string;
+}
+
+interface ConstructorStanding {
+  position: number | string;
+  team_name: string;
+  points: number | string;
+}
+
+async function fetchDriverStandings(): Promise<string[]> {
+  const year = new Date().getFullYear();
+  const url = `https://api.openf1.org/v1/driver_standings?year=${year}`;
+  const res = await axios.get<DriverStanding[]>(url);
+  return res.data.map(
+    s => `${s.position}. ${s.full_name} - ${s.points} pts`
+  );
+}
+
+async function fetchConstructorStandings(): Promise<string[]> {
+  const year = new Date().getFullYear();
+  const url = `https://api.openf1.org/v1/constructor_standings?year=${year}`;
+  const res = await axios.get<ConstructorStanding[]>(url);
+  return res.data.map(
+    s => `${s.position}. ${s.team_name} - ${s.points} pts`
+  );
+}
+
 function mapSessionToRace(session: OpenF1Session): Race {
   const [date, time] = session.date_start.split('T');
   const raceName =
@@ -130,5 +180,11 @@ function convertToTZ(date: string, time = '00:00:00Z', tz: string): string {
   return m.format('YYYY-MM-DD HH:mm z');
 }
 
-export { startBot, formatRace, convertToTZ };
+export {
+  startBot,
+  formatRace,
+  convertToTZ,
+  fetchDriverStandings,
+  fetchConstructorStandings,
+};
 
