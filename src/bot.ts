@@ -18,7 +18,7 @@ function startBot(): TelegramBot {
     const chatId = msg.chat.id;
     bot.sendMessage(
       chatId,
-      'Welcome to F1-Schedule!\nSend "full", "next", "drivers" or "teams" to get information.'
+      'Welcome to F1-Schedule!\nSend "/full", "/next", "/drivers" or "/teams" to get information.'
     );
   });
 
@@ -28,7 +28,7 @@ function startBot(): TelegramBot {
 
     console.log(`Received message from ${chatId}: ${text}`);
 
-    if (text === 'full') {
+    if (text === '/full') {
       try {
         const races = await fetchFullCalendar();
         const message = races.map(formatRace).join('\n\n');
@@ -38,7 +38,7 @@ function startBot(): TelegramBot {
         console.error('Failed to load calendar', err);
         bot.sendMessage(chatId, 'Failed to load calendar');
       }
-    } else if (text === 'next') {
+    } else if (text === '/next') {
       try {
         const races = await fetchNextRace();
         if (races.length === 0) {
@@ -52,7 +52,7 @@ function startBot(): TelegramBot {
         console.error('Failed to load next race', err);
         bot.sendMessage(chatId, 'Failed to load next race');
       }
-    } else if (text === 'drivers') {
+    } else if (text === '/drivers') {
       try {
         const standings = await fetchDriverStandings();
         const message = standings.join('\n');
@@ -62,7 +62,7 @@ function startBot(): TelegramBot {
         console.error('Failed to load driver standings', err);
         bot.sendMessage(chatId, 'Failed to load driver standings');
       }
-    } else if (text === 'teams') {
+    } else if (text === '/teams') {
       try {
         const standings = await fetchConstructorStandings();
         const message = standings.join('\n');
