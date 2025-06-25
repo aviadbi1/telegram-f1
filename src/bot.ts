@@ -62,12 +62,15 @@ interface Race {
   };
   date: string;
   time?: string;
+  startTime: string;
   Qualifying?: { date: string; time?: string };
   Sprint?: { date: string; time?: string };
 }
 
 interface OpenF1Session {
-  meeting_name: string;
+  meeting_name?: string;
+  location?: string;
+  country_name?: string;
   circuit_short_name: string;
   session_name: string;
   date_start: string;
@@ -83,17 +86,22 @@ async function fetchFullCalendar(): Promise<Race[]> {
 async function fetchNextRace(): Promise<Race[]> {
   const races = await fetchFullCalendar();
   const now = new Date();
-  const next = races.find(r => new Date(`${r.date}T${r.time ?? '00:00:00Z'}`) > now);
+  const next = races.find(r => new Date(r.startTime) > now);
   return next ? [next] : [];
 }
 
 function mapSessionToRace(session: OpenF1Session): Race {
   const [date, time] = session.date_start.split('T');
+  const raceName =
+    session.meeting_name ??
+    (session.location ? `${session.location} GP` : session.country_name ?? '');
+
   return {
-    raceName: session.meeting_name,
+    raceName,
     Circuit: { circuitName: session.circuit_short_name },
     date,
     time,
+    startTime: session.date_start,
   };
 }
 

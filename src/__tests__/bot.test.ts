@@ -14,6 +14,7 @@ describe('formatRace', () => {
       Circuit: { circuitName: 'Test Circuit' },
       date: '2023-05-07',
       time: '13:00:00Z',
+      startTime: '2023-05-07T13:00:00Z',
       Qualifying: { date: '2023-05-06', time: '13:00:00Z' },
       Sprint: { date: '2023-05-06', time: '09:00:00Z' },
     } as any;
