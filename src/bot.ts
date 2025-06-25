@@ -18,7 +18,7 @@ function startBot(): TelegramBot {
     const chatId = msg.chat.id;
     bot.sendMessage(
       chatId,
-      'Welcome to F1-Schedule!\nSend "full calendar" or "next race" to get information.'
+      'Welcome to F1-Schedule!\nSend "full", "next", "drivers" or "teams" to get information.'
     );
   });
 
@@ -28,7 +28,7 @@ function startBot(): TelegramBot {
 
     console.log(`Received message from ${chatId}: ${text}`);
 
-    if (text === 'full calendar') {
+    if (text === 'full') {
       try {
         const races = await fetchFullCalendar();
         const message = races.map(formatRace).join('\n\n');
@@ -38,7 +38,7 @@ function startBot(): TelegramBot {
         console.error('Failed to load calendar', err);
         bot.sendMessage(chatId, 'Failed to load calendar');
       }
-    } else if (text === 'next race') {
+    } else if (text === 'next') {
       try {
         const races = await fetchNextRace();
         if (races.length === 0) {
@@ -52,7 +52,7 @@ function startBot(): TelegramBot {
         console.error('Failed to load next race', err);
         bot.sendMessage(chatId, 'Failed to load next race');
       }
-    } else if (text === 'driver standings') {
+    } else if (text === 'drivers') {
       try {
         const standings = await fetchDriverStandings();
         const message = standings.join('\n');
@@ -62,7 +62,7 @@ function startBot(): TelegramBot {
         console.error('Failed to load driver standings', err);
         bot.sendMessage(chatId, 'Failed to load driver standings');
       }
-    } else if (text === 'team standings') {
+    } else if (text === 'teams') {
       try {
         const standings = await fetchConstructorStandings();
         const message = standings.join('\n');
@@ -118,36 +118,34 @@ async function fetchNextRace(): Promise<Race[]> {
 }
 
 interface DriverStanding {
-  position: string;
-  points: string;
-  Driver: {
-    givenName: string;
-    familyName: string;
-  };
+  position: number | string;
+  full_name: string;
+  points: number | string;
 }
 
 interface ConstructorStanding {
-  position: string;
-  points: string;
-  Constructor: {
-    name: string;
-  };
+  position: number | string;
+  team_name: string;
+  points: number | string;
 }
 
 async function fetchDriverStandings(): Promise<string[]> {
-  const url = 'https://ergast.com/api/f1/current/driverStandings.json';
-  const res = await axios.get(url);
-  const standings: DriverStanding[] =
-    res.data.MRData.StandingsTable.StandingsLists[0].DriverStandings;
-  return standings.map(s => `${s.position}. ${s.Driver.givenName} ${s.Driver.familyName} - ${s.points} pts`);
+  const year = new Date().getFullYear();
+  const url = `https://api.openf1.org/v1/driver_standings?year=${year}`;
+  const res = await axios.get<DriverStanding[]>(url);
+  return res.data.map(
+    s => `${s.position}. ${s.full_name} - ${s.points} pts`
+  );
 }
 
 async function fetchConstructorStandings(): Promise<string[]> {
-  const url = 'https://ergast.com/api/f1/current/constructorStandings.json';
-  const res = await axios.get(url);
-  const standings: ConstructorStanding[] =
-    res.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings;
-  return standings.map(s => `${s.position}. ${s.Constructor.name} - ${s.points} pts`);
+  const year = new Date().getFullYear();
+  const url = `https://api.openf1.org/v1/constructor_standings?year=${year}`;
+  const res = await axios.get<ConstructorStanding[]>(url);
+  return res.data.map(
+    s => `${s.position}. ${s.team_name} - ${s.points} pts`
+  );
+
 }
 
 function mapSessionToRace(session: OpenF1Session): Race {
