@@ -2,43 +2,58 @@ import TelegramBot from 'node-telegram-bot-api';
 import axios from 'axios';
 import moment from 'moment-timezone';
 
-const token = process.env.BOT_TOKEN;
-if (!token) {
-  throw new Error('BOT_TOKEN environment variable is required');
+function startBot(): TelegramBot {
+  const token = process.env.BOT_TOKEN;
+  if (!token) {
+    console.error('BOT_TOKEN environment variable is required');
+    throw new Error('BOT_TOKEN environment variable is required');
+  }
+
+  console.log('Starting bot...');
+  const bot = new TelegramBot(token, { polling: true });
+
+  console.log('Bot started successfully');
+
+  bot.onText(/\/start/, msg => {
+    const chatId = msg.chat.id;
+    bot.sendMessage(
+      chatId,
+      'Welcome to F1-Schedule!\nSend "full calendar" or "next race" to get information.'
+    );
+  });
+
+  bot.on('message', async msg => {
+    const chatId = msg.chat.id;
+    const text = msg.text?.toLowerCase();
+
+    console.log(`Received message from ${chatId}: ${text}`);
+
+    if (text === 'full calendar') {
+      try {
+        const races = await fetchFullCalendar();
+        const message = races.map(formatRace).join('\n\n');
+        console.log(`Sending response to ${chatId}: ${message.replace(/\n/g, ' | ')}`);
+        bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (err) {
+        console.error('Failed to load calendar', err);
+        bot.sendMessage(chatId, 'Failed to load calendar');
+      }
+    } else if (text === 'next race') {
+      try {
+        const races = await fetchNextRace();
+        const message = races.map(formatRace).join('\n\n');
+        console.log(`Sending response to ${chatId}: ${message.replace(/\n/g, ' | ')}`);
+        bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (err) {
+        console.error('Failed to load next race', err);
+        bot.sendMessage(chatId, 'Failed to load next race');
+      }
+    }
+  });
+
+  return bot;
 }
 
-const bot = new TelegramBot(token, { polling: true });
-
-bot.onText(/\/start/, msg => {
-  const chatId = msg.chat.id;
-  bot.sendMessage(
-    chatId,
-    'Welcome to F1-Schedule!\nSend "full calendar" or "next race" to get information.'
-  );
-});
-
-bot.on('message', async msg => {
-  const chatId = msg.chat.id;
-  const text = msg.text?.toLowerCase();
-
-  if (text === 'full calendar') {
-    try {
-      const races = await fetchFullCalendar();
-      const message = races.map(formatRace).join('\n\n');
-      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-    } catch (err) {
-      bot.sendMessage(chatId, 'Failed to load calendar');
-    }
-  } else if (text === 'next race') {
-    try {
-      const races = await fetchNextRace();
-      const message = races.map(formatRace).join('\n\n');
-      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-    } catch (err) {
-      bot.sendMessage(chatId, 'Failed to load next race');
-    }
-  }
-});
 
 interface Race {
   raceName: string;
@@ -88,5 +103,5 @@ function convertToTZ(date: string, time = '00:00:00Z', tz: string): string {
   return m.format('YYYY-MM-DD HH:mm z');
 }
 
-export { formatRace, convertToTZ };
+export { startBot, formatRace, convertToTZ };
 

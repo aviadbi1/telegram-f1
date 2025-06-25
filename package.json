@@ -2,10 +2,10 @@
   "name": "f1-schedule-bot",
   "version": "1.0.0",
   "description": "Telegram bot showing F1 race schedule",
-  "main": "dist/bot.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/bot.js",
+    "start": "node dist/index.js",
     "test": "jest"
   },
   "dependencies": {
