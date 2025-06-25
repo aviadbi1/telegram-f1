@@ -48,6 +48,26 @@ function startBot(): TelegramBot {
         console.error('Failed to load next race', err);
         bot.sendMessage(chatId, 'Failed to load next race');
       }
+    } else if (text === 'driver standings') {
+      try {
+        const standings = await fetchDriverStandings();
+        const message = standings.join('\n');
+        console.log(`Sending response to ${chatId}: ${message}`);
+        bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (err) {
+        console.error('Failed to load driver standings', err);
+        bot.sendMessage(chatId, 'Failed to load driver standings');
+      }
+    } else if (text === 'team standings') {
+      try {
+        const standings = await fetchConstructorStandings();
+        const message = standings.join('\n');
+        console.log(`Sending response to ${chatId}: ${message}`);
+        bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      } catch (err) {
+        console.error('Failed to load team standings', err);
+        bot.sendMessage(chatId, 'Failed to load team standings');
+      }
     }
   });
 
@@ -90,6 +110,39 @@ async function fetchNextRace(): Promise<Race[]> {
   return next ? [next] : [];
 }
 
+interface DriverStanding {
+  position: string;
+  points: string;
+  Driver: {
+    givenName: string;
+    familyName: string;
+  };
+}
+
+interface ConstructorStanding {
+  position: string;
+  points: string;
+  Constructor: {
+    name: string;
+  };
+}
+
+async function fetchDriverStandings(): Promise<string[]> {
+  const url = 'https://ergast.com/api/f1/current/driverStandings.json';
+  const res = await axios.get(url);
+  const standings: DriverStanding[] =
+    res.data.MRData.StandingsTable.StandingsLists[0].DriverStandings;
+  return standings.map(s => `${s.position}. ${s.Driver.givenName} ${s.Driver.familyName} - ${s.points} pts`);
+}
+
+async function fetchConstructorStandings(): Promise<string[]> {
+  const url = 'https://ergast.com/api/f1/current/constructorStandings.json';
+  const res = await axios.get(url);
+  const standings: ConstructorStanding[] =
+    res.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings;
+  return standings.map(s => `${s.position}. ${s.Constructor.name} - ${s.points} pts`);
+}
+
 function mapSessionToRace(session: OpenF1Session): Race {
   const [date, time] = session.date_start.split('T');
   const raceName =
@@ -130,5 +183,11 @@ function convertToTZ(date: string, time = '00:00:00Z', tz: string): string {
   return m.format('YYYY-MM-DD HH:mm z');
 }
 
-export { startBot, formatRace, convertToTZ };
+export {
+  startBot,
+  formatRace,
+  convertToTZ,
+  fetchDriverStandings,
+  fetchConstructorStandings,
+};
 
