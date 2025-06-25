@@ -41,6 +41,10 @@ function startBot(): TelegramBot {
     } else if (text === 'next') {
       try {
         const races = await fetchNextRace();
+        if (races.length === 0) {
+          bot.sendMessage(chatId, 'No upcoming races found');
+          return;
+        }
         const message = races.map(formatRace).join('\n\n');
         console.log(`Sending response to ${chatId}: ${message.replace(/\n/g, ' | ')}`);
         bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
@@ -96,17 +100,20 @@ interface OpenF1Session {
   date_start: string;
 }
 
-async function fetchFullCalendar(): Promise<Race[]> {
-  const year = new Date().getFullYear();
+async function fetchFullCalendar(year = new Date().getFullYear()): Promise<Race[]> {
   const url = `https://api.openf1.org/v1/sessions?session_name=Race&year=${year}`;
   const res = await axios.get<OpenF1Session[]>(url);
-  return res.data.map(mapSessionToRace);
+  return res.data.map(mapSessionToRace).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 }
 
 async function fetchNextRace(): Promise<Race[]> {
-  const races = await fetchFullCalendar();
   const now = new Date();
-  const next = races.find(r => new Date(r.startTime) > now);
+  let races = await fetchFullCalendar(now.getFullYear());
+  let next = races.find(r => new Date(r.startTime) > now);
+  if (!next) {
+    races = await fetchFullCalendar(now.getFullYear() + 1);
+    next = races[0];
+  }
   return next ? [next] : [];
 }
 
@@ -138,6 +145,7 @@ async function fetchConstructorStandings(): Promise<string[]> {
   return res.data.map(
     s => `${s.position}. ${s.team_name} - ${s.points} pts`
   );
+
 }
 
 function mapSessionToRace(session: OpenF1Session): Race {
