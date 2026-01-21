@@ -1,0 +1,4 @@
+[
+  { "name": "ticketmaster", "enabled": true },
+  { "name": "mock", "enabled": true }
+]
